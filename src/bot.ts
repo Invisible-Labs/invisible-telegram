@@ -35,7 +35,7 @@ export function createBot(config: AppConfig, invisible: InvisibleClient): Bot {
     await ctx.answerCallbackQuery();
     await runPrivateTransfer(ctx, invisible, {
       side: "buy",
-      mint: config.demoMint,
+      mint: "SOL",
       amountSol: config.demoAmountSol,
       destinationAddress: config.demoDestinationAddress,
     });

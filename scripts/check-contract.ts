@@ -40,5 +40,8 @@ const botSource = readFileSync(new URL("../src/bot.ts", import.meta.url), "utf8"
 if (botSource.includes("private:sell")) {
   throw new Error("unsupported private:sell callback must not be exposed");
 }
+if (botSource.includes("config.demoMint")) {
+  throw new Error("inline demo action must not accept configurable non-SOL mint");
+}
 
 console.log("telegram contract ok");

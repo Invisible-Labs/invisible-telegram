@@ -12,7 +12,6 @@ export type AppConfig = {
   invisibleRequiredMode: RequiredMode;
   invisibleReleaseMrtd: string;
   invisibleIntelRootFingerprint: string;
-  demoMint: string;
   demoAmountSol: string;
   demoDestinationAddress: string;
 };
@@ -34,7 +33,6 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     invisibleRequiredMode: readMode(env.INVISIBLE_REQUIRED_MODE),
     invisibleReleaseMrtd: readRequired(env, "INVISIBLE_RELEASE_MRTD"),
     invisibleIntelRootFingerprint: readRequired(env, "INVISIBLE_INTEL_ROOT_FINGERPRINT"),
-    demoMint: readOptional(env, "DEMO_MINT") ?? "SOL",
     demoAmountSol: readOptional(env, "DEMO_AMOUNT_SOL") ?? "0.1",
     demoDestinationAddress: readOptional(env, "DEMO_DESTINATION_ADDRESS") ?? "",
   };
