@@ -17,6 +17,31 @@ const pin = pool.endpoints[0]?.releasePin;
 if (!pin?.mrtd || !pin.intelRootFingerprint) {
   throw new Error("coordinator release pin must include mrtd and intelRootFingerprint");
 }
+if ("allowMissingDcapCollateral" in pin) {
+  throw new Error("missing DCAP collateral escape hatch must be disabled by default");
+}
+
+const legacyDevPin = buildCoordinatorPool(
+  readConfig({ ...baseEnv, INVISIBLE_ALLOW_MISSING_DCAP_COLLATERAL: "true" }),
+).endpoints[0]?.releasePin;
+if (legacyDevPin?.allowMissingDcapCollateral !== true) {
+  throw new Error("non-prod legacy DCAP collateral escape hatch must be explicit");
+}
+
+try {
+  buildCoordinatorPool(
+    readConfig({
+      ...baseEnv,
+      INVISIBLE_REQUIRED_MODE: "prod",
+      INVISIBLE_ALLOW_MISSING_DCAP_COLLATERAL: "true",
+    }),
+  );
+  throw new Error("prod mode must reject missing DCAP collateral escape hatch");
+} catch (error) {
+  if (!(error instanceof Error) || !error.message.includes("DCAP")) {
+    throw error;
+  }
+}
 
 try {
   readConfig({ ...baseEnv, WEBHOOK_URL: "https://example.com/webhook" });

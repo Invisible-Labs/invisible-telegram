@@ -29,7 +29,11 @@ export type CoordinatorPoolConfig = {
     wsUrl: string;
     expectedHostname: string;
     requiredMode: "dev" | "prod" | "auto";
-    releasePin: { mrtd: string; intelRootFingerprint: string };
+    releasePin: {
+      mrtd: string;
+      intelRootFingerprint: string;
+      allowMissingDcapCollateral?: boolean;
+    };
   }>;
   allowedRoles?: string[];
   preferLeader?: boolean;
@@ -116,6 +120,9 @@ export function buildCoordinatorPool(config: AppConfig): CoordinatorPoolConfig {
   if (endpoint.protocol !== "wss:" && endpoint.protocol !== "ws:") {
     throw new Error("INVISIBLE_COORDINATOR_WS_URL must use ws:// or wss://");
   }
+  if (config.invisibleRequiredMode === "prod" && config.invisibleAllowMissingDcapCollateral) {
+    throw new Error("INVISIBLE_ALLOW_MISSING_DCAP_COLLATERAL is only allowed outside prod mode");
+  }
 
   return {
     endpoints: [
@@ -126,6 +133,9 @@ export function buildCoordinatorPool(config: AppConfig): CoordinatorPoolConfig {
         releasePin: {
           mrtd: config.invisibleReleaseMrtd,
           intelRootFingerprint: config.invisibleIntelRootFingerprint,
+          ...(config.invisibleAllowMissingDcapCollateral
+            ? { allowMissingDcapCollateral: true }
+            : {}),
         },
       },
     ],
