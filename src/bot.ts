@@ -56,11 +56,17 @@ export function parsePrivateCommand(raw: string):
   if ((side !== "buy" && side !== "sell") || !mint || !amountSol || !destinationAddress) {
     return { ok: false, message: "Usage: /private buy SOL 0.1 <destination>" };
   }
+  if (side !== "buy" || mint.toUpperCase() !== "SOL") {
+    return {
+      ok: false,
+      message: "This example only supports buy SOL. Add asset routing before accepting other intents.",
+    };
+  }
   return {
     ok: true,
     input: {
       side,
-      mint,
+      mint: "SOL",
       amountSol,
       destinationAddress,
     },
