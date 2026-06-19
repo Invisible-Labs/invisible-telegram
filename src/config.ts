@@ -65,6 +65,6 @@ function readBoolean(value: string | undefined, fallback: boolean): boolean {
 }
 
 function readMode(value: string | undefined): RequiredMode {
-  if (value === "prod" || value === "auto") return value;
-  return "dev";
+  if (value === "dev" || value === "prod" || value === "auto") return value;
+  throw new Error("INVISIBLE_REQUIRED_MODE must be dev, prod, or auto");
 }

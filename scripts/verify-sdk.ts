@@ -4,7 +4,10 @@ import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 
 const packageSpec = process.env.INVISIBLE_SDK_PACKAGE ?? "latest";
-const required = process.env.VERIFY_SDK_REQUIRED === "1";
+const required =
+  process.env.VERIFY_SDK_REQUIRED === "1" ||
+  Boolean(process.env.INVISIBLE_SDK_PACKAGE) ||
+  Boolean(process.env.NPM_TOKEN);
 const workspace = join(tmpdir(), `invisible-sdk-verify-${process.pid}`);
 
 await mkdir(workspace, { recursive: true });

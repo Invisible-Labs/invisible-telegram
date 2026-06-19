@@ -21,9 +21,18 @@ try {
   readConfig({ ...baseEnv, WEBHOOK_URL: "https://example.com/webhook" });
   throw new Error("webhook mode must require TELEGRAM_WEBHOOK_SECRET");
 } catch (error) {
-  if (error instanceof Error && error.message.includes("TELEGRAM_WEBHOOK_SECRET")) {
-    console.log("telegram contract ok");
-  } else {
+  if (!(error instanceof Error) || !error.message.includes("TELEGRAM_WEBHOOK_SECRET")) {
     throw error;
   }
 }
+
+try {
+  readConfig({ ...baseEnv, INVISIBLE_REQUIRED_MODE: undefined });
+  throw new Error("attestation mode must fail closed");
+} catch (error) {
+  if (!(error instanceof Error) || !error.message.includes("INVISIBLE_REQUIRED_MODE")) {
+    throw error;
+  }
+}
+
+console.log("telegram contract ok");
