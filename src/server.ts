@@ -7,8 +7,10 @@ import type { AppConfig } from "./config.js";
 
 export async function startBot(bot: Bot, config: AppConfig): Promise<void> {
   if (config.webhookUrl) {
-    await bot.api.setWebhook(config.webhookUrl);
-    await startWebhookServer(bot, config.port);
+    const secretToken = config.telegramWebhookSecret;
+    if (!secretToken) throw new Error("TELEGRAM_WEBHOOK_SECRET is required in webhook mode");
+    await bot.api.setWebhook(config.webhookUrl, { secret_token: secretToken });
+    await startWebhookServer(bot, config.port, secretToken);
     return;
   }
 
@@ -25,8 +27,8 @@ export async function startBot(bot: Bot, config: AppConfig): Promise<void> {
   await bot.start();
 }
 
-async function startWebhookServer(bot: Bot, port: number): Promise<void> {
-  const handleUpdate = webhookCallback(bot, "http");
+async function startWebhookServer(bot: Bot, port: number, secretToken: string): Promise<void> {
+  const handleUpdate = webhookCallback(bot, "http", { secretToken });
   const server = createServer(async (request, response) => {
     if (request.method !== "POST" || request.url !== "/webhook") {
       response.writeHead(404).end("not found");

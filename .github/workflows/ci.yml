@@ -23,6 +23,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run build
+      - run: npm run check:contract
       - run: npm run simulate
       - run: npm run verify:sdk
       - run: npm run audit:high

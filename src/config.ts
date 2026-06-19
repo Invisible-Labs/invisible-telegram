@@ -5,25 +5,35 @@ export type RequiredMode = "dev" | "prod" | "auto";
 export type AppConfig = {
   telegramBotToken: string;
   webhookUrl: string | null;
+  telegramWebhookSecret: string | null;
   port: number;
   enablePolling: boolean;
   invisibleCoordinatorWsUrl: string;
   invisibleRequiredMode: RequiredMode;
   invisibleReleaseMrtd: string;
+  invisibleIntelRootFingerprint: string;
   demoMint: string;
   demoAmountSol: string;
   demoDestinationAddress: string;
 };
 
 export function readConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
+  const webhookUrl = readOptional(env, "WEBHOOK_URL");
+  const telegramWebhookSecret = readOptional(env, "TELEGRAM_WEBHOOK_SECRET");
+  if (webhookUrl && !telegramWebhookSecret) {
+    throw new Error("TELEGRAM_WEBHOOK_SECRET is required when WEBHOOK_URL is set");
+  }
+
   return {
     telegramBotToken: readRequired(env, "TELEGRAM_BOT_TOKEN"),
-    webhookUrl: readOptional(env, "WEBHOOK_URL"),
+    webhookUrl,
+    telegramWebhookSecret,
     port: readPort(env.PORT),
     enablePolling: readBoolean(env.ENABLE_POLLING, true),
     invisibleCoordinatorWsUrl: readRequired(env, "INVISIBLE_COORDINATOR_WS_URL"),
     invisibleRequiredMode: readMode(env.INVISIBLE_REQUIRED_MODE),
     invisibleReleaseMrtd: readRequired(env, "INVISIBLE_RELEASE_MRTD"),
+    invisibleIntelRootFingerprint: readRequired(env, "INVISIBLE_INTEL_ROOT_FINGERPRINT"),
     demoMint: readOptional(env, "DEMO_MINT") ?? "SOL",
     demoAmountSol: readOptional(env, "DEMO_AMOUNT_SOL") ?? "0.1",
     demoDestinationAddress: readOptional(env, "DEMO_DESTINATION_ADDRESS") ?? "",

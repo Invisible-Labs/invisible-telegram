@@ -11,6 +11,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
+    "check:contract": "tsx scripts/check-contract.ts",
     "simulate": "tsx src/simulate.ts",
     "verify:sdk": "tsx scripts/verify-sdk.ts",
     "audit:high": "npm audit --audit-level=high"

@@ -29,7 +29,7 @@ export type CoordinatorPoolConfig = {
     wsUrl: string;
     expectedHostname: string;
     requiredMode: "dev" | "prod" | "auto";
-    releasePin: { mrtd: string };
+    releasePin: { mrtd: string; intelRootFingerprint: string };
   }>;
   allowedRoles?: string[];
   preferLeader?: boolean;
@@ -123,7 +123,10 @@ export function buildCoordinatorPool(config: AppConfig): CoordinatorPoolConfig {
         wsUrl: config.invisibleCoordinatorWsUrl,
         expectedHostname: endpoint.hostname,
         requiredMode: config.invisibleRequiredMode,
-        releasePin: { mrtd: config.invisibleReleaseMrtd },
+        releasePin: {
+          mrtd: config.invisibleReleaseMrtd,
+          intelRootFingerprint: config.invisibleIntelRootFingerprint,
+        },
       },
     ],
     allowedRoles: ["leader"],
