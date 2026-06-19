@@ -1,5 +1,21 @@
 # Invisible Telegram
 
-Classic Telegram bot example for Invisible private transfers.
+Classic Telegram bot example for server-side Invisible private transfers.
 
-Implementation lives in pull requests.
+```bash
+cp .env.example .env
+npm ci
+npm run dev
+```
+
+Use polling locally. Use `WEBHOOK_URL` in production.
+
+Required:
+
+```txt
+TELEGRAM_BOT_TOKEN=
+INVISIBLE_COORDINATOR_WS_URL=
+INVISIBLE_RELEASE_MRTD=
+```
+
+The bot uses Telegram Bot API webhooks or long polling. Invisible coordinator traffic stays server-side over WebSocket.
