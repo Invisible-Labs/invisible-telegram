@@ -20,6 +20,8 @@ INVISIBLE_RELEASE_MRTD=
 INVISIBLE_INTEL_ROOT_FINGERPRINT=
 ```
 
-The SDK requires DCAP collateral by default. For a legacy non-production coordinator that does not emit collateral yet, set `INVISIBLE_ALLOW_MISSING_DCAP_COLLATERAL=true`. The example rejects that flag in `prod` mode.
+The SDK requires DCAP collateral by default. Production examples need a coordinator that emits `dcap_collateral` or a compatible attestation manifest. For legacy previews only, set `INVISIBLE_ALLOW_MISSING_DCAP_COLLATERAL=true`; this maps to `releasePin.allowMissingDcapCollateral` and is rejected in `prod` mode.
 
 The bot uses Telegram Bot API webhooks or long polling. Invisible coordinator traffic stays server-side over WebSocket. This example only accepts `buy SOL`; other assets or sides are intentionally rejected.
+
+`npm run verify:sdk` installs `@invisible/sdk` in a temporary consumer project. It must pass from the published or packaged SDK artifact, not from local monorepo paths or generated FROST files.
