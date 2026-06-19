@@ -1,5 +1,6 @@
 import { readConfig } from "../src/config.js";
 import { buildCoordinatorPool } from "../src/sdk.js";
+import { readFileSync } from "node:fs";
 
 const baseEnv = {
   TELEGRAM_BOT_TOKEN: "test-token",
@@ -33,6 +34,11 @@ try {
   if (!(error instanceof Error) || !error.message.includes("INVISIBLE_REQUIRED_MODE")) {
     throw error;
   }
+}
+
+const botSource = readFileSync(new URL("../src/bot.ts", import.meta.url), "utf8");
+if (botSource.includes("private:sell")) {
+  throw new Error("unsupported private:sell callback must not be exposed");
 }
 
 console.log("telegram contract ok");

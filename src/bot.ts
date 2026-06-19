@@ -31,11 +31,10 @@ export function createBot(config: AppConfig, invisible: InvisibleClient): Bot {
     await runPrivateTransfer(ctx, invisible, parsed.input);
   });
 
-  bot.callbackQuery(/^private:(buy|sell)$/u, async (ctx) => {
-    const side = ctx.match[1] === "sell" ? "sell" : "buy";
+  bot.callbackQuery("private:buy", async (ctx) => {
     await ctx.answerCallbackQuery();
     await runPrivateTransfer(ctx, invisible, {
-      side,
+      side: "buy",
       mint: config.demoMint,
       amountSol: config.demoAmountSol,
       destinationAddress: config.demoDestinationAddress,
@@ -87,7 +86,6 @@ export function renderTransferResult(result: PrivateTransferResult): string {
 function mainMenu(): InlineKeyboard {
   return new InlineKeyboard()
     .text("Private buy", "private:buy")
-    .text("Private sell", "private:sell")
     .row()
     .text("Status", "status");
 }
