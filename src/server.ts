@@ -6,6 +6,13 @@ import { webhookCallback } from "grammy";
 import type { AppConfig } from "./config.js";
 
 export async function startBot(bot: Bot, config: AppConfig): Promise<void> {
+  bot.catch((error) => {
+    console.error("Telegram update failed", {
+      updateId: error.ctx.update.update_id,
+      message: error.error instanceof Error ? error.error.message : "unknown",
+    });
+  });
+
   if (config.webhookUrl) {
     const secretToken = config.telegramWebhookSecret;
     if (!secretToken) throw new Error("TELEGRAM_WEBHOOK_SECRET is required in webhook mode");
@@ -18,12 +25,6 @@ export async function startBot(bot: Bot, config: AppConfig): Promise<void> {
     throw new Error("Set WEBHOOK_URL or ENABLE_POLLING=true");
   }
 
-  bot.catch((error) => {
-    console.error("Telegram update failed", {
-      updateId: error.ctx.update.update_id,
-      message: error.error instanceof Error ? error.error.message : "unknown",
-    });
-  });
   await bot.start();
 }
 

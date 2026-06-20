@@ -8,6 +8,7 @@ type SdkRoot = {
     storage?: unknown;
     wallet?: unknown;
   }): Promise<SdkSession>;
+  closeSession?(session: SdkSession): void;
   normalizeError?(error: unknown, fallback?: string): string;
 };
 type SdkUser = {
@@ -65,19 +66,28 @@ export type PrivateTransferResult =
   | { kind: "sdk-not-ready"; message: string }
   | { kind: "failed"; message: string };
 
+export type PrivateTransferSession =
+  | {
+      kind: "ready";
+      startPrivateTransfer(input: PrivateTransferInput): Promise<PrivateTransferResult>;
+      close(): void;
+    }
+  | { kind: "unavailable"; message: string };
+
 export type InvisibleClient = {
+  openPrivateTransferSession(): Promise<PrivateTransferSession>;
   startPrivateTransfer(input: PrivateTransferInput): Promise<PrivateTransferResult>;
 };
 
 export function createInvisibleClient(config: AppConfig): InvisibleClient {
   return {
-    async startPrivateTransfer(input) {
+    async openPrivateTransferSession() {
       const sdk = await loadSdk();
       if (!sdk) {
         return {
-          kind: "sdk-missing",
+          kind: "unavailable",
           message: "Install @invisible/sdk from the private package registry before running this bot.",
-        };
+        } satisfies PrivateTransferSession;
       }
 
       try {
@@ -85,31 +95,54 @@ export function createInvisibleClient(config: AppConfig): InvisibleClient {
           coordinator: buildCoordinatorPool(config),
           storage: sdk.storage.inMemoryStorage?.(),
         });
-        const receipt = await sdk.user.contractRequest(session, {
-          amountLamports: solToLamports(input.amountSol),
-          payoutPolicy: singleDestinationPolicy(input.destinationAddress),
-          sync: true,
-        });
 
         return {
-          kind: "accepted",
-          requestId: receipt.requestId ?? receipt.request_id ?? "accepted",
-        };
+          kind: "ready",
+          async startPrivateTransfer(input) {
+            const receipt = await sdk.user.contractRequest(session, {
+              amountLamports: solToLamports(input.amountSol),
+              payoutPolicy: singleDestinationPolicy(input.destinationAddress),
+              sync: true,
+            });
+
+            return {
+              kind: "accepted",
+              requestId: receipt.requestId ?? receipt.request_id ?? "accepted",
+            };
+          },
+          close() {
+            sdk.root.closeSession?.(session);
+          },
+        } satisfies PrivateTransferSession;
       } catch (error) {
         const message = normalizeSdkError(sdk.root, error);
         if (message.includes("NOT_ATTESTED") || message.includes("not attested")) {
           return {
-            kind: "sdk-not-ready",
+            kind: "unavailable",
             message: "SDK connected, but this package build has not completed coordinator attestation yet.",
-          };
+          } satisfies PrivateTransferSession;
         }
         if (message.includes("NOT_IMPLEMENTED") || message.includes("not implemented")) {
           return {
-            kind: "sdk-not-ready",
+            kind: "unavailable",
             message: "SDK package is installed, but this command is still preview-only in the current build.",
-          };
+          } satisfies PrivateTransferSession;
         }
-        return { kind: "failed", message };
+        return { kind: "unavailable", message } satisfies PrivateTransferSession;
+      }
+    },
+    async startPrivateTransfer(input) {
+      const session = await this.openPrivateTransferSession();
+      if (session.kind === "unavailable") {
+        return { kind: "sdk-not-ready", message: session.message };
+      }
+
+      try {
+        return await session.startPrivateTransfer(input);
+      } catch (error) {
+        return { kind: "failed", message: error instanceof Error ? error.message : "Invisible transfer failed." };
+      } finally {
+        session.close();
       }
     },
   };

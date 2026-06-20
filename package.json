@@ -13,6 +13,8 @@
     "typecheck": "tsc --noEmit",
     "check:contract": "tsx scripts/check-contract.ts",
     "simulate": "tsx src/simulate.ts",
+    "telegram:set-webhook": "tsx scripts/set-webhook.ts",
+    "telegram:delete-webhook": "tsx scripts/delete-webhook.ts",
     "verify:sdk": "tsx scripts/verify-sdk.ts",
     "audit:high": "npm audit --audit-level=high"
   },
