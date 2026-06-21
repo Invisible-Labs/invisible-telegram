@@ -1,6 +1,6 @@
 # Invisible Telegram
 
-Classic Telegram bot example for server-side Invisible private transfers.
+Telegram bot SDK example for server-side Invisible private transfers.
 
 ```bash
 git clone git@github.com:Invisible-Labs/invisible-telegram.git

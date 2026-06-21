@@ -110,7 +110,7 @@ export function createBot(config: AppConfig, invisible: InvisibleClient): Bot {
   return bot;
 }
 
-export function parsePrivateCommand(raw: string): 
+export function parsePrivateCommand(raw: string):
   | { ok: true; input: PrivateTransferInput }
   | { ok: false; message: string } {
   const [side, mint, amountSol, destinationAddress] = raw.trim().split(/\s+/u);
@@ -195,7 +195,6 @@ export function renderLpActionResult(result: LpActionResult): string {
         result.message,
         `Position: ${result.position.id}`,
         `Withdrawal: ${result.withdrawalId}`,
-        result.txSignatures.length > 0 ? `Transactions: ${result.txSignatures.join(", ")}` : null,
       ]
         .filter(Boolean)
         .join("\n");
