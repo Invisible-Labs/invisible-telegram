@@ -28,6 +28,11 @@ INVISIBLE_INTEL_ROOT_FINGERPRINT=
 - `/start` opens the trading menu.
 - `Private transfer` opens a short-lived server-side Invisible session.
 - `Buy SOL privately` submits the demo private-transfer intent.
+- `/lp create` creates an LP position and returns the LP Position Code.
+- `/lp recover <position-code>` refreshes an LP position through the SDK.
+- `/lp dkg <position-code>` completes the SDK-owned DKG batch.
+- `/lp funding <position-code>` returns the LP_DKG_0 funding instruction.
+- `/lp reconcile <position-code>`, `/lp refill <position-code>`, and `/lp withdraw <position-code> <destination>` call the matching SDK LP actions.
 - `Back to trading` or `Close` closes the private-transfer session.
 - Inactivity closes the private-transfer session after one hour.
 - `Contact us` links to the Invisible Telegram chat for teams that want a hosted or deeper integration.
@@ -86,4 +91,4 @@ The bot uses Telegram Bot API webhooks or long polling. Invisible coordinator tr
 
 This example does not persist transfer codes, recovery codes, sync secrets, or LP codes. Integrators that want to redisplay user transfer state, history, or LP state must store the SDK-returned codes they need for their own UX. Without those codes, the coordinator cannot reconstruct that history for the integrator. Storing less data is better for privacy, but may degrade UX.
 
-`npm run verify:sdk` installs `@invisible/sdk` in a temporary consumer project. It must pass from the published or packaged SDK artifact, not from local monorepo paths or generated FROST files.
+`npm run verify:sdk` installs `@invisible/sdk@npm:@invisible-labs/sdk@0.1.0-dev.1.2` in a temporary consumer project when `INVISIBLE_SDK_PACKAGE` is unset. It allows freshly published private dev packages for that temporary install only, and must pass from the published or packaged SDK artifact, not from local monorepo paths or generated FROST files.

@@ -23,7 +23,7 @@
     "grammy": "1.43.0"
   },
   "optionalDependencies": {
-    "@invisible/sdk": "0.0.0"
+    "@invisible/sdk": "npm:@invisible-labs/sdk@0.1.0-dev.1.2"
   },
   "devDependencies": {
     "@types/node": "24.10.3",

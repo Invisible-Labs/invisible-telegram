@@ -5,6 +5,8 @@ import type { AppConfig } from "./config.js";
 import { shortAddress } from "./format.js";
 import type {
   InvisibleClient,
+  LpActionInput,
+  LpActionResult,
   PrivateTransferInput,
   PrivateTransferResult,
   PrivateTransferSession,
@@ -30,7 +32,20 @@ export function createBot(config: AppConfig, invisible: InvisibleClient): Bot {
   });
 
   bot.command("help", async (ctx) => {
-    await ctx.reply("/start\n/private buy SOL 0.1 <destination>\n/status");
+    await ctx.reply(
+      [
+        "/start",
+        "/private buy SOL 0.1 <destination>",
+        "/lp create",
+        "/lp recover <position-code>",
+        "/lp dkg <position-code>",
+        "/lp funding <position-code>",
+        "/lp reconcile <position-code>",
+        "/lp refill <position-code>",
+        "/lp withdraw <position-code> <destination>",
+        "/status",
+      ].join("\n"),
+    );
   });
 
   bot.command("status", async (ctx) => {
@@ -45,6 +60,16 @@ export function createBot(config: AppConfig, invisible: InvisibleClient): Bot {
       return;
     }
     await runOneShotPrivateTransfer(ctx, invisible, parsed.input);
+  });
+
+  bot.command("lp", async (ctx) => {
+    const parsed = parseLpCommand(ctx.match);
+    if (!parsed.ok) {
+      await ctx.reply(parsed.message);
+      return;
+    }
+    const result = await invisible.runLpAction(parsed.input);
+    await ctx.reply(renderLpActionResult(result));
   });
 
   bot.callbackQuery("menu:private-transfer", async (ctx) => {
@@ -120,6 +145,67 @@ export function renderTransferResult(result: PrivateTransferResult): string {
   }
 }
 
+export function parseLpCommand(raw: string):
+  | { ok: true; input: LpActionInput }
+  | { ok: false; message: string } {
+  const [rawAction, positionCode, destinationAddress] = raw.trim().split(/\s+/u);
+  const action = normalizeLpAction(rawAction);
+  if (action === null) {
+    return {
+      ok: false,
+      message: "Usage: /lp create|recover|dkg|funding|reconcile|refill|withdraw <position-code> [destination]",
+    };
+  }
+  if (action !== "create" && !positionCode) {
+    return { ok: false, message: `Usage: /lp ${rawAction} <position-code>` };
+  }
+  if (action === "withdraw" && !destinationAddress) {
+    return { ok: false, message: "Usage: /lp withdraw <position-code> <destination>" };
+  }
+  const input: LpActionInput = { action };
+  if (positionCode !== undefined) input.positionCode = positionCode;
+  if (destinationAddress !== undefined) input.destinationAddress = destinationAddress;
+  return {
+    ok: true,
+    input,
+  };
+}
+
+export function renderLpActionResult(result: LpActionResult): string {
+  switch (result.kind) {
+    case "position":
+      return [
+        result.message,
+        `Position: ${result.position.id}`,
+        `Status: ${result.position.status}`,
+        `Shards: ${result.position.shardCount}/${result.position.targetShardCount}`,
+        result.lpPositionCode ? `LP Position Code: ${result.lpPositionCode}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+    case "funding":
+      return [
+        result.message,
+        `Position: ${result.position.id}`,
+        `Amount lamports: ${result.requiredLamports}`,
+        `Address: ${result.address}`,
+      ].join("\n");
+    case "withdrawal":
+      return [
+        result.message,
+        `Position: ${result.position.id}`,
+        `Withdrawal: ${result.withdrawalId}`,
+        result.txSignatures.length > 0 ? `Transactions: ${result.txSignatures.join(", ")}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+    case "sdk-missing":
+    case "sdk-not-ready":
+    case "failed":
+      return result.message;
+  }
+}
+
 function mainMenu(): InlineKeyboard {
   return new InlineKeyboard()
     .text("Private transfer", "menu:private-transfer")
@@ -137,6 +223,27 @@ function privateTransferMenu(): InlineKeyboard {
     .text("Close", "private:close")
     .row()
     .url("Contact us", CONTACT_URL);
+}
+
+function normalizeLpAction(rawAction: string | undefined): LpActionInput["action"] | null {
+  switch (rawAction) {
+    case "create":
+      return "create";
+    case "recover":
+      return "recover";
+    case "dkg":
+      return "complete-dkg";
+    case "funding":
+      return "prepare-funding";
+    case "reconcile":
+      return "reconcile-funding";
+    case "refill":
+      return "refill";
+    case "withdraw":
+      return "withdraw";
+    default:
+      return null;
+  }
 }
 
 async function runOneShotPrivateTransfer(

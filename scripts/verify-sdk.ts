@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 
-const packageSpec = process.env.INVISIBLE_SDK_PACKAGE ?? "latest";
+const packageSpec = process.env.INVISIBLE_SDK_PACKAGE ?? "npm:@invisible-labs/sdk@0.1.0-dev.1.2";
+const privateSdkInstallArgs = ["install", "--omit=dev", "--min-release-age=0"];
 const required =
   process.env.VERIFY_SDK_REQUIRED === "1" ||
   Boolean(process.env.INVISIBLE_SDK_PACKAGE) ||
@@ -28,7 +29,7 @@ try {
     ].join("\n"),
   );
 
-  const install = spawnSync("npm", ["install", "--omit=dev"], {
+  const install = spawnSync("npm", privateSdkInstallArgs, {
     cwd: workspace,
     encoding: "utf8",
     stdio: "pipe",
@@ -46,7 +47,7 @@ try {
     [
       "--input-type=module",
       "--eval",
-      "await import('@invisible/sdk'); await import('@invisible/sdk/user'); await import('@invisible/sdk/storage'); console.log('sdk imports ok')",
+      "await import('@invisible/sdk'); await import('@invisible/sdk/user'); await import('@invisible/sdk/lp'); await import('@invisible/sdk/storage'); console.log('sdk imports ok')",
     ],
     { cwd: workspace, encoding: "utf8", stdio: "pipe" },
   );
