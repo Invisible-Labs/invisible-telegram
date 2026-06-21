@@ -1,0 +1,72 @@
+import { readConfig } from "../src/config.js";
+import { buildCoordinatorPool } from "../src/sdk.js";
+import { readFileSync } from "node:fs";
+
+const baseEnv = {
+  TELEGRAM_BOT_TOKEN: "test-token",
+  INVISIBLE_COORDINATOR_WS_URL: "wss://coordinator.example/ws-noise",
+  INVISIBLE_REQUIRED_MODE: "dev",
+  INVISIBLE_RELEASE_MRTD:
+    "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+  INVISIBLE_INTEL_ROOT_FINGERPRINT:
+    "0000000000000000000000000000000000000000000000000000000000000000",
+} satisfies NodeJS.ProcessEnv;
+
+const pool = buildCoordinatorPool(readConfig(baseEnv));
+const pin = pool.endpoints[0]?.releasePin;
+if (!pin?.mrtd || !pin.intelRootFingerprint) {
+  throw new Error("coordinator release pin must include mrtd and intelRootFingerprint");
+}
+if ("allowMissingDcapCollateral" in pin) {
+  throw new Error("missing DCAP collateral escape hatch must be disabled by default");
+}
+
+const legacyDevPin = buildCoordinatorPool(
+  readConfig({ ...baseEnv, INVISIBLE_ALLOW_MISSING_DCAP_COLLATERAL: "true" }),
+).endpoints[0]?.releasePin;
+if (legacyDevPin?.allowMissingDcapCollateral !== true) {
+  throw new Error("non-prod legacy DCAP collateral escape hatch must be explicit");
+}
+
+try {
+  buildCoordinatorPool(
+    readConfig({
+      ...baseEnv,
+      INVISIBLE_REQUIRED_MODE: "prod",
+      INVISIBLE_ALLOW_MISSING_DCAP_COLLATERAL: "true",
+    }),
+  );
+  throw new Error("prod mode must reject missing DCAP collateral escape hatch");
+} catch (error) {
+  if (!(error instanceof Error) || !error.message.includes("DCAP")) {
+    throw error;
+  }
+}
+
+try {
+  readConfig({ ...baseEnv, WEBHOOK_URL: "https://example.com/webhook" });
+  throw new Error("webhook mode must require TELEGRAM_WEBHOOK_SECRET");
+} catch (error) {
+  if (!(error instanceof Error) || !error.message.includes("TELEGRAM_WEBHOOK_SECRET")) {
+    throw error;
+  }
+}
+
+try {
+  readConfig({ ...baseEnv, INVISIBLE_REQUIRED_MODE: undefined });
+  throw new Error("attestation mode must fail closed");
+} catch (error) {
+  if (!(error instanceof Error) || !error.message.includes("INVISIBLE_REQUIRED_MODE")) {
+    throw error;
+  }
+}
+
+const botSource = readFileSync(new URL("../src/bot.ts", import.meta.url), "utf8");
+if (botSource.includes("private:sell")) {
+  throw new Error("unsupported private:sell callback must not be exposed");
+}
+if (botSource.includes("config.demoMint")) {
+  throw new Error("inline demo action must not accept configurable non-SOL mint");
+}
+
+console.log("telegram contract ok");

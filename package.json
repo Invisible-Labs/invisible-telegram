@@ -1,0 +1,33 @@
+{
+  "name": "invisible-telegram",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "check:contract": "tsx scripts/check-contract.ts",
+    "simulate": "tsx src/simulate.ts",
+    "telegram:set-webhook": "tsx scripts/set-webhook.ts",
+    "telegram:delete-webhook": "tsx scripts/delete-webhook.ts",
+    "verify:sdk": "tsx scripts/verify-sdk.ts",
+    "audit:high": "npm audit --audit-level=high"
+  },
+  "dependencies": {
+    "dotenv": "17.2.3",
+    "grammy": "1.43.0"
+  },
+  "optionalDependencies": {
+    "@invisible/sdk": "npm:@invisible-labs/sdk@0.1.0-dev.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.3",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3"
+  }
+}
