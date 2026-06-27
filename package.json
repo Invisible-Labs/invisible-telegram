@@ -1,0 +1,27 @@
+{
+  "name": "invisible-telegram",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@11.14.1",
+  "engines": {
+    "node": ">=22.22.3",
+    "npm": ">=11.14.1"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/bot.ts",
+    "start": "node dist/bot.js",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@invisible-labs/sdk": "0.1.0-dev.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "26.0.1",
+    "tsx": "4.22.4",
+    "typescript": "5.9.3",
+    "vitest": "4.1.9"
+  }
+}
