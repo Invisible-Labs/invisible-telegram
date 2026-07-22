@@ -6,7 +6,6 @@ services:
     buildCommand: npm ci && npm run build
     startCommand: npm run start:render
     healthCheckPath: /healthz
-    maxShutdownDelaySeconds: 60
     envVars:
       - key: NODE_VERSION
         value: "22"
