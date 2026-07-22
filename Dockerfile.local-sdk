@@ -1,0 +1,35 @@
+# syntax=docker/dockerfile:1.7
+
+FROM node:22-bookworm-slim AS build
+
+WORKDIR /workspace/invisible-telegram
+
+COPY package.json package-lock.json ./
+COPY tsconfig.json tsconfig.build.json ./
+COPY src ./src
+
+# The sdk build context is supplied by:
+# docker buildx build --build-context sdk=../Invisible/packages/sdk ...
+COPY --from=sdk package.json /workspace/Invisible/packages/sdk/package.json
+COPY --from=sdk dist /workspace/Invisible/packages/sdk/dist
+
+# install-links copies the local SDK package into node_modules instead of
+# leaving a symlink to the developer's sibling checkout.
+RUN npm ci --install-links
+RUN npm run build
+RUN npm prune --omit=dev
+
+FROM node:22-bookworm-slim
+
+WORKDIR /workspace/invisible-telegram
+ENV NODE_ENV=production
+
+COPY --from=build /workspace/invisible-telegram/package.json ./package.json
+COPY --from=build /workspace/invisible-telegram/dist ./dist
+COPY --from=build /workspace/invisible-telegram/node_modules ./node_modules
+
+# Keep the sibling path available as a fallback if npm preserves a file:
+# symlink in a future npm version.
+COPY --from=build /workspace/Invisible/packages/sdk /workspace/Invisible/packages/sdk
+
+CMD ["node", "dist/backend/main.js"]
