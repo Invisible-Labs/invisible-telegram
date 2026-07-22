@@ -8,7 +8,9 @@
     "dev": "npm run dev:telegram",
     "dev:backend": "node --env-file=.env --watch --import=tsx src/backend/main.ts",
     "dev:telegram": "node --env-file=.env --watch --import=tsx src/main.ts",
+    "dev:render": "node --env-file=.env --watch --import=tsx src/render-main.ts",
     "start:backend": "node dist/backend/main.js",
+    "start:render": "node dist/render-main.js",
     "start:telegram": "node dist/main.js",
     "typecheck": "tsc --noEmit"
   },

@@ -1,10 +1,10 @@
 services:
   - type: web
-    name: invisible-telegram-backend
+    name: invisible-telegram-demo
     runtime: node
-    plan: starter
+    plan: free
     buildCommand: npm ci && npm run build
-    startCommand: npm run start:backend
+    startCommand: npm run start:render
     healthCheckPath: /healthz
     maxShutdownDelaySeconds: 60
     envVars:
@@ -12,10 +12,14 @@ services:
         value: "22"
       - key: NODE_AUTH_TOKEN
         sync: false
-      - key: PORT
-        value: "10001"
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false
       - key: BACKEND_API_TOKEN
         generateValue: true
+      - key: PORT
+        value: "10000"
       - key: COORDINATOR_WS_URL
         sync: false
       - key: COORDINATOR_EXPECTED_HOSTNAME
@@ -32,28 +36,3 @@ services:
         sync: false
       - key: COORDINATOR_AZURE_MAA_POLICY_HASH
         sync: false
-
-  - type: worker
-    name: invisible-telegram-bot
-    runtime: node
-    plan: starter
-    buildCommand: npm ci && npm run build
-    startCommand: npm run start:telegram
-    maxShutdownDelaySeconds: 60
-    envVars:
-      - key: NODE_VERSION
-        value: "22"
-      - key: NODE_AUTH_TOKEN
-        sync: false
-      - key: TELEGRAM_BOT_TOKEN
-        sync: false
-      - key: BACKEND_API_TOKEN
-        fromService:
-          type: web
-          name: invisible-telegram-backend
-          envVarKey: BACKEND_API_TOKEN
-      - key: BACKEND_HOSTPORT
-        fromService:
-          type: web
-          name: invisible-telegram-backend
-          property: hostport
