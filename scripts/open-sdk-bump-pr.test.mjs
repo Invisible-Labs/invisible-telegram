@@ -52,5 +52,7 @@ describe("SDK bump pull request helper", () => {
     );
     assert.match(helper, /PULL_REQUEST_ASSIGNEE = "JWMatheo"/u);
     assert.match(helper, /"--assignee",\s*PULL_REQUEST_ASSIGNEE/u);
+    assert.match(helper, /PULL_REQUEST_LABEL = "infra"/u);
+    assert.match(helper, /"--label",\s*PULL_REQUEST_LABEL/u);
   });
 });

@@ -14,6 +14,7 @@ const BRANCH_PREFIX = "automation/sdk-bump-";
 const ALLOWED_CHANGED_FILES = new Set(["package.json", "package-lock.json"]);
 const COMMIT_MESSAGE_PREFIX = "chore: bump";
 const PULL_REQUEST_ASSIGNEE = "JWMatheo";
+const PULL_REQUEST_LABEL = "infra";
 
 export function sdkBumpBranch(value) {
   const version = validateSdkVersion(value);
@@ -186,6 +187,8 @@ export function publishSdkBump(value, { env = process.env } = {}) {
       sdkBumpPullRequestBody(version),
       "--assignee",
       PULL_REQUEST_ASSIGNEE,
+      "--label",
+      PULL_REQUEST_LABEL,
     ],
     { capture: true, env },
   );
