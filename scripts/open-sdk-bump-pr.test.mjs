@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   allowedChangedFiles,
+  parseGitStatusPaths,
   sdkBumpBranch,
   sdkBumpCommitMessage,
   sdkBumpPullRequestBody,
@@ -43,6 +44,13 @@ describe("SDK bump pull request helper", () => {
     assert.deepEqual(allowedChangedFiles(["package.json", "src/main.ts"]), [
       "src/main.ts",
     ]);
+  });
+
+  it("preserves the first character of paths from porcelain status", () => {
+    assert.deepEqual(
+      parseGitStatusPaths(" M package-lock.json\n?? package.json\n"),
+      ["package-lock.json", "package.json"],
+    );
   });
 
   it("assigns automated pull requests to the repository owner", () => {

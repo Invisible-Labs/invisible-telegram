@@ -15,6 +15,7 @@ const ALLOWED_CHANGED_FILES = new Set(["package.json", "package-lock.json"]);
 const COMMIT_MESSAGE_PREFIX = "chore: bump";
 const PULL_REQUEST_ASSIGNEE = "JWMatheo";
 const PULL_REQUEST_LABEL = "infra";
+const GIT_STATUS_PATH_PREFIX = /^.{2} /u;
 
 export function sdkBumpBranch(value) {
   const version = validateSdkVersion(value);
@@ -43,7 +44,11 @@ export function sdkBumpPullRequestBody(value) {
   ].join("\n");
 }
 
-function run(command, args, { capture = false, env = process.env } = {}) {
+function run(
+  command,
+  args,
+  { capture = false, env = process.env, trimOutput = true } = {},
+) {
   const result = spawnSync(command, args, {
     encoding: "utf8",
     env,
@@ -56,7 +61,8 @@ function run(command, args, { capture = false, env = process.env } = {}) {
       `${command} ${args.join(" ")} exited with status ${result.status ?? "unknown"}${detail ? `\n${detail}` : ""}`,
     );
   }
-  return result.stdout?.trim() ?? "";
+  const output = result.stdout ?? "";
+  return trimOutput ? output.trim() : output;
 }
 
 function remoteBranchExists(branch) {
@@ -72,11 +78,26 @@ export function allowedChangedFiles(paths) {
   return paths.filter((path) => !ALLOWED_CHANGED_FILES.has(path));
 }
 
-function workingTreePaths() {
-  return run("git", ["status", "--porcelain=v1"], { capture: true })
+export function parseGitStatusPaths(statusOutput) {
+  return statusOutput
     .split(/\r?\n/u)
     .filter(Boolean)
-    .map((line) => line.slice(3));
+    .map((line) => {
+      const prefix = line.match(GIT_STATUS_PATH_PREFIX)?.[0];
+      if (!prefix) {
+        throw new Error(`Unable to parse git status line: ${line}`);
+      }
+      return line.slice(prefix.length);
+    });
+}
+
+function workingTreePaths() {
+  return parseGitStatusPaths(
+    run("git", ["status", "--porcelain=v1"], {
+      capture: true,
+      trimOutput: false,
+    }),
+  );
 }
 
 function committedPaths() {
