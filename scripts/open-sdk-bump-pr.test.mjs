@@ -3,16 +3,25 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, it } from "node:test";
 import {
   allowedChangedFiles,
   parseGitStatusPaths,
+  prepareSdkBumpBranch,
   sdkBumpBranch,
   sdkBumpCommitMessage,
   sdkBumpCommitEnvironment,
   sdkBumpPullRequestBody,
   sdkBumpPullRequestTitle,
 } from "./open-sdk-bump-pr.mjs";
+
+function runGit(directory, args, options = {}) {
+  return spawnSync("git", ["-C", directory, ...args], {
+    encoding: "utf8",
+    ...options,
+  });
+}
 
 describe("SDK bump pull request helper", () => {
   it("derives a stable branch and commit name from the exact version", () => {
@@ -89,6 +98,98 @@ describe("SDK bump pull request helper", () => {
         author.stdout.trim(),
         `${environment.GIT_AUTHOR_NAME} <${environment.GIT_AUTHOR_EMAIL}>`,
       );
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps merge-base history when reusing an existing bump branch", () => {
+    const version = "0.6.0-devnet.2-dev.123.1";
+    const branch = sdkBumpBranch(version);
+    const directory = mkdtempSync(join(tmpdir(), "invisible-telegram-git-"));
+    const remote = join(directory, "remote.git");
+    const seed = join(directory, "seed");
+    const clone = join(directory, "clone");
+    const gitEnvironment = {
+      ...process.env,
+      GIT_AUTHOR_NAME: "SDK bump test",
+      GIT_AUTHOR_EMAIL: "sdk-bump-test@example.invalid",
+      GIT_COMMITTER_NAME: "SDK bump test",
+      GIT_COMMITTER_EMAIL: "sdk-bump-test@example.invalid",
+    };
+
+    try {
+      assert.equal(
+        spawnSync("git", ["init", "--bare", remote], {
+          encoding: "utf8",
+        }).status,
+        0,
+      );
+      assert.equal(
+        spawnSync("git", ["init", seed], { encoding: "utf8" }).status,
+        0,
+      );
+      assert.equal(
+        runGit(seed, ["config", "user.name", "SDK bump test"]).status,
+        0,
+      );
+      assert.equal(
+        runGit(seed, ["config", "user.email", "sdk-bump-test@example.invalid"])
+          .status,
+        0,
+      );
+      writeFileSync(join(seed, "package.json"), '{"name":"test"}\n');
+      assert.equal(runGit(seed, ["add", "package.json"]).status, 0);
+      assert.equal(
+        runGit(seed, ["commit", "-m", "base"], {
+          env: gitEnvironment,
+        }).status,
+        0,
+      );
+      assert.equal(runGit(seed, ["branch", "-M", "main"]).status, 0);
+      assert.equal(runGit(seed, ["remote", "add", "origin", remote]).status, 0);
+      assert.equal(runGit(seed, ["push", "origin", "main"]).status, 0);
+      assert.equal(runGit(seed, ["switch", "-c", branch]).status, 0);
+      writeFileSync(join(seed, "package.json"), '{"name":"bump"}\n');
+      assert.equal(runGit(seed, ["add", "package.json"]).status, 0);
+      assert.equal(
+        runGit(seed, ["commit", "-m", "sdk bump"], {
+          env: gitEnvironment,
+        }).status,
+        0,
+      );
+      assert.equal(runGit(seed, ["push", "origin", branch]).status, 0);
+
+      const cloneResult = spawnSync(
+        "git",
+        [
+          "clone",
+          "--depth=1",
+          "--branch",
+          "main",
+          pathToFileURL(remote).href,
+          clone,
+        ],
+        { encoding: "utf8" },
+      );
+      assert.equal(cloneResult.status, 0, cloneResult.stderr);
+
+      const previousDirectory = process.cwd();
+      try {
+        process.chdir(clone);
+        assert.equal(prepareSdkBumpBranch(version), branch);
+        const mergeBase = runGit(clone, ["merge-base", "origin/main", "HEAD"]);
+        assert.equal(mergeBase.status, 0, mergeBase.stderr);
+        const changedPaths = runGit(clone, [
+          "diff",
+          "--name-only",
+          "origin/main...HEAD",
+        ]);
+        assert.equal(changedPaths.status, 0, changedPaths.stderr);
+        assert.equal(changedPaths.stdout.trim(), "package.json");
+      } finally {
+        process.chdir(previousDirectory);
+      }
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
