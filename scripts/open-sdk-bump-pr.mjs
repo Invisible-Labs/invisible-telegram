@@ -88,6 +88,10 @@ function remoteBranchExists(branch) {
   return result.status === 0;
 }
 
+function remoteTrackingRef(branch) {
+  return `${branch}:refs/remotes/origin/${branch}`;
+}
+
 export function allowedChangedFiles(paths) {
   return paths.filter((path) => !ALLOWED_CHANGED_FILES.has(path));
 }
@@ -133,9 +137,9 @@ function assertAllowedPaths(paths, scope) {
 
 export function prepareSdkBumpBranch(value) {
   const branch = sdkBumpBranch(value);
-  run("git", ["fetch", "origin", BASE_BRANCH, "--depth=1"]);
+  run("git", ["fetch", "origin", remoteTrackingRef(BASE_BRANCH)]);
   if (remoteBranchExists(branch)) {
-    run("git", ["fetch", "origin", branch, "--depth=1"]);
+    run("git", ["fetch", "origin", remoteTrackingRef(branch)]);
     run("git", ["switch", "--force-create", branch, `origin/${branch}`]);
   } else {
     run("git", ["switch", "--force-create", branch, `origin/${BASE_BRANCH}`]);
