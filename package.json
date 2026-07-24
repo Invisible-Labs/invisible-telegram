@@ -12,7 +12,8 @@
     "start:backend": "node dist/backend/main.js",
     "start:render": "node dist/render-main.js",
     "start:telegram": "node dist/main.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:automation": "node --test --test-concurrency=1 scripts/*.test.mjs"
   },
   "repository": {
     "type": "git",

@@ -90,8 +90,20 @@ The lockfile pins the SDK version used by the bot. Update it explicitly when a
 new private `dev` package should be tested:
 
 ```bash
-npm install --save-exact @invisible-labs/sdk@dev
+npm install --save-exact @invisible-labs/sdk@<exact-version>
 ```
+
+When a new published SDK dev version is available, the `SDK Dev Bump` workflow
+opens a pull request with the exact package version, updates both manifests,
+and runs the typecheck, build, and high-severity npm audit checks before the PR
+is created. Use the workflow's manual dispatch input to replay a specific
+version if the automatic event needs recovery.
+
+Run `npm run test:automation` locally to validate the bump helpers and workflow
+contract.
+
+The workflow requires the `SDK_PRIVATE_PACKAGE_READ_TOKEN` repository secret
+with read access to the private GitHub Package.
 
 Render must provide `NODE_AUTH_TOKEN` to the web service so its `npm ci` build
 command can install the private package.

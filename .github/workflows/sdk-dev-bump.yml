@@ -1,0 +1,129 @@
+name: SDK Dev Bump
+
+on:
+  repository_dispatch:
+    types: [sdk-dev-published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact @invisible-labs/sdk version to install
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: invisible-telegram-sdk-bump-${{ github.event.client_payload.package_version || inputs.version }}
+  cancel-in-progress: false
+
+env:
+  SDK_PACKAGE_NAME: "@invisible-labs/sdk"
+
+jobs:
+  bump:
+    name: Bump published SDK version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Telegram application
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: .node-version
+
+      - name: Resolve SDK bump input
+        id: sdk-input
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_PACKAGE_NAME: ${{ github.event.client_payload.package_name }}
+          EVENT_SDK_VERSION: ${{ github.event.client_payload.package_version }}
+          MANUAL_SDK_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ "${EVENT_NAME}" = "repository_dispatch" ]; then
+            if [ "${EVENT_PACKAGE_NAME}" != "${SDK_PACKAGE_NAME}" ]; then
+              echo "::error::Unexpected package in SDK dispatch: ${EVENT_PACKAGE_NAME:-<missing>}"
+              exit 1
+            fi
+            version="${EVENT_SDK_VERSION}"
+          else
+            version="${MANUAL_SDK_VERSION}"
+          fi
+          if [ -z "${version}" ]; then
+            echo "::error::The SDK version is missing."
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare version-specific bump branch
+        env:
+          SDK_VERSION: ${{ steps.sdk-input.outputs.version }}
+        run: node scripts/open-sdk-bump-pr.mjs prepare --version "$SDK_VERSION"
+
+      - name: Verify SDK package availability
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.SDK_PRIVATE_PACKAGE_READ_TOKEN }}
+          SDK_VERSION: ${{ steps.sdk-input.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::error::Missing SDK_PRIVATE_PACKAGE_READ_TOKEN."
+            exit 1
+          fi
+          resolved_version="$(npm view "${SDK_PACKAGE_NAME}@${SDK_VERSION}" version)"
+          if [ "${resolved_version}" != "${SDK_VERSION}" ]; then
+            echo "::error::GitHub Packages resolved ${resolved_version}, expected ${SDK_VERSION}."
+            exit 1
+          fi
+
+      - name: Test SDK bump automation
+        run: npm run test:automation
+
+      - name: Update exact SDK dependency
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.SDK_PRIVATE_PACKAGE_READ_TOKEN }}
+          SDK_VERSION: ${{ steps.sdk-input.outputs.version }}
+        run: node scripts/update-sdk-dependency.mjs --version "$SDK_VERSION"
+
+      - name: Verify dependency diff
+        env:
+          SDK_VERSION: ${{ steps.sdk-input.outputs.version }}
+        run: |
+          set -euo pipefail
+          node scripts/update-sdk-dependency.mjs --check --version "$SDK_VERSION"
+          while IFS= read -r changed_file; do
+            case "${changed_file}" in
+              ""|package.json|package-lock.json) ;;
+              *)
+                echo "::error::Unexpected changed file: ${changed_file}"
+                exit 1
+                ;;
+            esac
+          done < <(git status --porcelain=v1 | sed 's/^...//')
+
+      - name: Install exact lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.SDK_PRIVATE_PACKAGE_READ_TOKEN }}
+        run: npm ci
+
+      - name: Typecheck Telegram application
+        run: npm run typecheck
+
+      - name: Build Telegram application
+        run: npm run build
+
+      - name: Audit installed dependency tree
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.SDK_PRIVATE_PACKAGE_READ_TOKEN }}
+        run: npm audit --audit-level=high
+
+      - name: Commit and open SDK bump PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SDK_VERSION: ${{ steps.sdk-input.outputs.version }}
+        run: node scripts/open-sdk-bump-pr.mjs publish --version "$SDK_VERSION"
