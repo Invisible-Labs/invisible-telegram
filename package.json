@@ -31,7 +31,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@invisible-labs/sdk": "^0.6.0-devnet.1-dev.114.1",
+    "@invisible-labs/sdk": "0.6.0-devnet.1-dev.114.1",
     "bs58": "^6.0.0",
     "express": "^5.2.1",
     "telegraf": "^4.16.3"
