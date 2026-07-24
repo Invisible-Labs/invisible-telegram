@@ -16,6 +16,10 @@ const COMMIT_MESSAGE_PREFIX = "chore: bump";
 const PULL_REQUEST_ASSIGNEE = "JWMatheo";
 const PULL_REQUEST_LABEL = "infra";
 const GIT_STATUS_PATH_PREFIX = /^.{2} /u;
+const AUTOMATION_COMMIT_IDENTITY = {
+  name: "github-actions[bot]",
+  email: "41898282+github-actions[bot]@users.noreply.github.com",
+};
 
 export function sdkBumpBranch(value) {
   const version = validateSdkVersion(value);
@@ -24,6 +28,16 @@ export function sdkBumpBranch(value) {
 
 export function sdkBumpCommitMessage(value) {
   return `${COMMIT_MESSAGE_PREFIX} ${SDK_PACKAGE_NAME} to ${validateSdkVersion(value)}`;
+}
+
+export function sdkBumpCommitEnvironment(env = process.env) {
+  return {
+    ...env,
+    GIT_AUTHOR_NAME: AUTOMATION_COMMIT_IDENTITY.name,
+    GIT_AUTHOR_EMAIL: AUTOMATION_COMMIT_IDENTITY.email,
+    GIT_COMMITTER_NAME: AUTOMATION_COMMIT_IDENTITY.name,
+    GIT_COMMITTER_EMAIL: AUTOMATION_COMMIT_IDENTITY.email,
+  };
 }
 
 export function sdkBumpPullRequestTitle(value) {
@@ -151,7 +165,9 @@ export function publishSdkBump(value, { env = process.env } = {}) {
 
   if (workingPaths.length > 0) {
     run("git", ["add", "--", ...workingPaths]);
-    run("git", ["commit", "-m", sdkBumpCommitMessage(version)]);
+    run("git", ["commit", "-m", sdkBumpCommitMessage(version)], {
+      env: sdkBumpCommitEnvironment(env),
+    });
   }
 
   const branchPaths = committedPaths();

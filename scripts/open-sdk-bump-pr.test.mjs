@@ -1,11 +1,15 @@
+import { spawnSync } from "node:child_process";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, it } from "node:test";
 import {
   allowedChangedFiles,
   parseGitStatusPaths,
   sdkBumpBranch,
   sdkBumpCommitMessage,
+  sdkBumpCommitEnvironment,
   sdkBumpPullRequestBody,
   sdkBumpPullRequestTitle,
 } from "./open-sdk-bump-pr.mjs";
@@ -51,6 +55,43 @@ describe("SDK bump pull request helper", () => {
       parseGitStatusPaths(" M package-lock.json\n?? package.json\n"),
       ["package-lock.json", "package.json"],
     );
+  });
+
+  it("provides an explicit identity for automation commits", () => {
+    const environment = sdkBumpCommitEnvironment();
+    const directory = mkdtempSync(join(tmpdir(), "invisible-telegram-sdk-"));
+    const packagePath = join(directory, "package.json");
+
+    try {
+      writeFileSync(packagePath, "{}\n");
+      assert.equal(
+        spawnSync("git", ["-C", directory, "init", "--quiet"]).status,
+        0,
+      );
+      assert.equal(
+        spawnSync("git", ["-C", directory, "add", "package.json"]).status,
+        0,
+      );
+
+      const commit = spawnSync(
+        "git",
+        ["-C", directory, "commit", "-m", "test automation identity"],
+        { env: environment, encoding: "utf8" },
+      );
+      assert.equal(commit.status, 0, commit.stderr);
+
+      const author = spawnSync(
+        "git",
+        ["-C", directory, "show", "-s", "--format=%an <%ae>"],
+        { encoding: "utf8" },
+      );
+      assert.equal(
+        author.stdout.trim(),
+        `${environment.GIT_AUTHOR_NAME} <${environment.GIT_AUTHOR_EMAIL}>`,
+      );
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   it("assigns automated pull requests to the repository owner", () => {
